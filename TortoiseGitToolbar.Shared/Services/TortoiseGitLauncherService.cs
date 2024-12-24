@@ -59,6 +59,9 @@ namespace MattDavies.TortoiseGitToolbar.Services
                 return;
             }
 
+            var preferredPath = Config.GlobalConfig.PreferFileOverSolution ? openedFilePath : solutionPath;
+
+
             ProcessStartInfo process;
             switch (command)
             {
@@ -66,16 +69,17 @@ namespace MattDavies.TortoiseGitToolbar.Services
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetGitBashPath(),
                         "--login -i",
-                        solutionPath
+                        preferredPath
                     );
                     break;
                 case ToolbarCommand.RebaseContinue:
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetGitBashPath(),
                         @"--login -i -c 'echo; echo ""Running git rebase --continue""; echo; git rebase --continue; echo; echo ""Please review the output above and press enter to continue.""; read'",
-                        solutionPath
+                        preferredPath
                     );
                     break;
+                case ToolbarCommand.Log:
                 case ToolbarCommand.FileLog:
                 case ToolbarCommand.FileDiff:
                     var commandParam = command.ToString().Replace("File", string.Empty).ToLower();
@@ -94,13 +98,13 @@ namespace MattDavies.TortoiseGitToolbar.Services
                 case ToolbarCommand.StashList:
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetTortoiseGitPath(),
-                        string.Format(@"/command:reflog /path:""{0}"" /ref:""refs/stash""", solutionPath)
+                        string.Format(@"/command:reflog /path:""{0}"" /ref:""refs/stash""", preferredPath)
                     );
                     break;
                 default:
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetTortoiseGitPath(),
-                        string.Format(@"/command:{0} /path:""{1}""", command.ToString().ToLower(), solutionPath)
+                        string.Format(@"/command:{0} /path:""{1}""", command.ToString().ToLower(), preferredPath)
                     );
                     break;
             }

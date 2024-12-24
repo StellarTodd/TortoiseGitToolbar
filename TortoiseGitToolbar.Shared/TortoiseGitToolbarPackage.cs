@@ -14,6 +14,7 @@ namespace MattDavies.TortoiseGitToolbar
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageConstants.GuidTortoiseGitToolbarPkgString)]
     [ProvideKeyBindingTable(PackageConstants.GuidTortoiseGitToolbarPkgString, 110)]
+    [ProvideOptionPage(typeof(Config.SettingsDialog), Config.GlobalConfig.ExtensionName, "General", 0, 0, true)]
     public sealed class TortoiseGitToolbarPackage : Package
     {
         private OleMenuCommandService _commandService;
