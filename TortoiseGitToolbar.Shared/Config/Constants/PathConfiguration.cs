@@ -45,7 +45,7 @@ namespace MattDavies.TortoiseGitToolbar.Config.Constants
 
         public static string GetSolutionPath(Solution2 solution)
         {
-            if (solution != null && solution.IsOpen)
+            if (solution != null && !String.IsNullOrEmpty(solution.FullName))
             {
                 var solutionPathFromSln = Path.GetDirectoryName(solution.FullName);
 

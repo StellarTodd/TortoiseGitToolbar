@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Windows.Forms;
 using EnvDTE80;
 using MattDavies.TortoiseGitToolbar.Config.Constants;
@@ -22,12 +24,56 @@ namespace MattDavies.TortoiseGitToolbar.Services
             _solution = solution;
         }
 
+        private string FindGitRepositoryRootPath(DirectoryInfo dirInfo)
+        {
+            while (dirInfo != null && dirInfo.Exists)
+            {
+                string gitPath = dirInfo.FullName + "/.git";
+                // Check for a .git directory
+                if (Directory.Exists(gitPath))
+                {
+                    return dirInfo.FullName;
+                }
+                // Check for a .git file (submodule)
+                if (File.Exists(gitPath))
+                {
+                    return dirInfo.FullName;
+                }
+                // git repo not found, look at the parent level.
+                dirInfo = dirInfo.Parent;
+            }
+
+            return null;
+        }
+
+        private string GitRepositoryRootPath(string selectedFile, string solutionPath)
+        {
+            if (!String.IsNullOrEmpty(selectedFile))
+            {
+                var selectedInfo = new FileInfo(selectedFile);
+                string gitPath = FindGitRepositoryRootPath(selectedInfo.Directory);
+                if (!String.IsNullOrEmpty(gitPath))
+                {
+                    return gitPath;
+                }
+            }
+
+            if (!String.IsNullOrEmpty(solutionPath))
+            {
+                DirectoryInfo solutionDir = new DirectoryInfo(solutionPath);
+                return FindGitRepositoryRootPath(solutionDir);
+            }
+
+            return null;
+        }
+
         public void ExecuteTortoiseProc(ToolbarCommand command)
         {
             var solutionPath = PathConfiguration.GetSolutionPath(_solution);
             var openedFilePath = PathConfiguration.GetOpenedFilePath(_solution);
             // todo: make the bash/tortoise paths configurable
             // todo: detect if the solution is a git solution first
+            var gitRepoPath = GitRepositoryRootPath(openedFilePath, solutionPath);
             if (command == ToolbarCommand.Bash && PathConfiguration.GetGitBashPath() == null)
             {
                 MessageBox.Show(
@@ -38,11 +84,11 @@ namespace MattDavies.TortoiseGitToolbar.Services
                 );
                 return;
             }
-            if (command != ToolbarCommand.Bash && solutionPath == null)
+            if (command != ToolbarCommand.Bash && gitRepoPath == null)
             {
                 MessageBox.Show(
-                    Resources.Resources.TortoiseGitLauncherService_SolutionPath_You_need_to_open_a_solution_first,
-                    Resources.Resources.TortoiseGitLauncherService_SolutionPath_No_solution_found,
+                    Resources.Resources.TortoiseGitLauncherService_GitRepositoryNotFound,
+                    Resources.Resources.TortoiseGitLauncherService_GitRepositoryNotFoundCaption,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Exclamation
                 );
@@ -66,14 +112,14 @@ namespace MattDavies.TortoiseGitToolbar.Services
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetGitBashPath(),
                         "--login -i",
-                        solutionPath
+                        gitRepoPath
                     );
                     break;
                 case ToolbarCommand.RebaseContinue:
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetGitBashPath(),
                         @"--login -i -c 'echo; echo ""Running git rebase --continue""; echo; git rebase --continue; echo; echo ""Please review the output above and press enter to continue.""; read'",
-                        solutionPath
+                        gitRepoPath
                     );
                     break;
                 case ToolbarCommand.FileLog:
@@ -94,13 +140,13 @@ namespace MattDavies.TortoiseGitToolbar.Services
                 case ToolbarCommand.StashList:
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetTortoiseGitPath(),
-                        string.Format(@"/command:reflog /path:""{0}"" /ref:""refs/stash""", solutionPath)
+                        string.Format(@"/command:reflog /path:""{0}"" /ref:""refs/stash""", gitRepoPath)
                     );
                     break;
                 default:
                     process = _processManagerService.GetProcess(
                         PathConfiguration.GetTortoiseGitPath(),
-                        string.Format(@"/command:{0} /path:""{1}""", command.ToString().ToLower(), solutionPath)
+                        string.Format(@"/command:{0} /path:""{1}""", command.ToString().ToLower(), gitRepoPath)
                     );
                     break;
             }
